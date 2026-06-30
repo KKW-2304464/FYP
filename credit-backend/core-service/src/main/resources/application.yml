@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: core-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/core_db}
+    username: ${SPRING_DATASOURCE_USERNAME:core}
+    password: ${SPRING_DATASOURCE_PASSWORD:core}
+  jpa:
+    hibernate:
+      # Demo: let Hibernate + Envers auto-create the schema (incl. *_AUD tables).
+      # Production hardening: switch to 'validate' and manage schema with Flyway.
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: false
+        # Envers audit table naming
+        envers:
+          audit_table_suffix: _AUD
+          store_data_at_delete: true
+    open-in-view: false
+
+# Downstream scoring service. Overridden to http://scoring-service:8000 in compose.
+scoring:
+  base-url: ${SCORING_BASE_URL:http://localhost:8000}
+
+# Business decision threshold on P(default): probability < threshold => suggest APPROVE.
+# Set this to your cost-optimal threshold from the offline decision analysis.
+decision:
+  threshold: ${DECISION_THRESHOLD:0.35}
+
+# Actuator health for compose healthchecks / UAT
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

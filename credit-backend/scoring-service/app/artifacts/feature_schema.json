@@ -1,0 +1,38 @@
+{
+  "model_version": "catboost-v1",
+  "model_type": "CatBoostClassifier",
+  "feature_cols": [
+    "State",
+    "BankState",
+    "Term",
+    "NoEmp",
+    "NewExist",
+    "CreateJob",
+    "RetainedJob",
+    "UrbanRural",
+    "RevLineCr",
+    "LowDoc",
+    "GrAppv",
+    "SBA_Appv",
+    "naics_sector",
+    "sba_guar_ratio",
+    "zero_appv_flag",
+    "term_years",
+    "is_franchise",
+    "same_state_bank",
+    "recession_0709"
+  ],
+  "categorical_cols": [
+    "State",
+    "BankState",
+    "NewExist",
+    "UrbanRural",
+    "RevLineCr",
+    "LowDoc",
+    "naics_sector",
+    "is_franchise",
+    "same_state_bank",
+    "recession_0709"
+  ],
+  "trained_at": "2026-06-29T08:30:56.417053+00:00"
+}

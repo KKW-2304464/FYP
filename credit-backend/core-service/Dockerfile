@@ -1,0 +1,17 @@
+# ---- build stage ----
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY pom.xml .
+# cache dependencies
+RUN mvn -q dependency:go-offline
+COPY src ./src
+RUN mvn -q clean package -DskipTests
+
+# ---- runtime stage ----
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+COPY --from=build /build/target/core-service-1.0.0.jar app.jar
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --retries=10 \
+    CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+ENTRYPOINT ["java", "-jar", "app.jar"]
