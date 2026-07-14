@@ -1,0 +1,34 @@
+{
+  "model_version": "catboost-v1",
+  "model_type": "CatBoostClassifier",
+  "feature_cols": [
+    "State", "BankState", "Term", "NoEmp", "NewExist", "CreateJob",
+    "RetainedJob", "UrbanRural", "RevLineCr", "LowDoc", "GrAppv",
+    "SBA_Appv", "naics_sector", "sba_guar_ratio", "zero_appv_flag",
+    "term_years", "is_franchise", "same_state_bank", "recession_0709"
+  ],
+  "categorical_cols": [
+    "State", "BankState", "NewExist", "UrbanRural", "RevLineCr",
+    "LowDoc", "naics_sector", "is_franchise", "same_state_bank",
+    "recession_0709"
+  ],
+  "trained_at": "2026-06-29T08:30:56.417053+00:00",
+  "dataset_name": "SBAnational",
+  "training_rows": 576107,
+  "validation_rows": 152714,
+  "test_rows": 168346,
+  "split_strategy": "Temporal split: train ApprovalFY < 2005; validation 2005-2006; test >= 2007",
+  "offline_metrics": {
+    "roc_auc": 0.9544,
+    "pr_auc": 0.9042,
+    "brier": 0.0784,
+    "validation_roc_auc": 0.9743
+  },
+  "intended_use": "Pre-approval decision support for SBA-like MSME applications; human review remains mandatory.",
+  "limitations": [
+    "Metrics are offline historical test results, not live repayment monitoring.",
+    "GrAppv is used as a proxy for requested amount because SBAnational has no application amount field.",
+    "The dataset is US SBA historical data and may not transfer directly to Malaysian borrowers.",
+    "Counterfactual results are model scenarios and do not guarantee approval."
+  ]
+}

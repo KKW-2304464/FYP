@@ -1,0 +1,99 @@
+# docker-compose.yml
+# Integration spine: PostgreSQL + Scoring (Python/FastAPI) + Core (Spring Boot).
+#
+# This is the whole point of the exercise: `docker compose up` brings up the two
+# services and proves Core <-> Scoring integration over the compose network. The
+# Auth service + API Gateway are the next increment and slot in here later.
+#
+# Topology is static (3 named services), so compose's built-in DNS is the service
+# discovery — no Eureka/Consul. One Postgres instance with a per-service database
+# (here: core_db) models "database per service" pragmatically for a demo; the
+# production-pure version would give each service its own Postgres.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: core
+      POSTGRES_PASSWORD: core
+      POSTGRES_DB: core_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U core -d core_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  scoring-service:
+    build: ./scoring-service
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  core-service:
+    build: ./core-service
+    expose:
+      - "8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/core_db
+      SPRING_DATASOURCE_USERNAME: core
+      SPRING_DATASOURCE_PASSWORD: core
+      SCORING_BASE_URL: http://scoring-service:8000
+      DECISION_THRESHOLD: "0.31"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      scoring-service:
+        condition: service_healthy
+
+  auth-service:
+    build: ./auth-service
+    expose:
+      - "8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: core
+      SPRING_DATASOURCE_PASSWORD: core
+      JWT_ISSUER: fyp-credit-system
+      JWT_SECRET: change-this-local-demo-secret-32-bytes-minimum
+      JWT_EXPIRATION_MINUTES: "480"
+      SEED_ADMIN_EMAIL: admin@fyp.test
+      SEED_ADMIN_PASSWORD: Admin123!
+      SEED_ADMIN_NAME: FYP Admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8088:8088"
+    environment:
+      AUTH_BASE_URL: http://auth-service:8082
+      CORE_BASE_URL: http://core-service:8080
+      JWT_ISSUER: fyp-credit-system
+      JWT_SECRET: change-this-local-demo-secret-32-bytes-minimum
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      core-service:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+
+volumes:
+  pgdata:

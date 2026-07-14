@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-07-13T00:00:00Z",
+  "dataset": "SBAnational cleaned training split",
+  "split_rule": "ApprovalFY < 2005 (70% temporal training split)",
+  "training_rows": 576107,
+  "term_months": {
+    "values": [12, 20, 36, 40, 48, 60, 61, 72, 84, 90, 96, 120, 180, 240, 242, 300]
+  },
+  "gr_appv": {
+    "quantiles": [15000.0, 25000.0, 50000.0, 110000.0, 270000.0, 543000.0, 775000.0]
+  },
+  "sba_guar_ratio": {
+    "quantiles": [0.5, 0.75, 0.8, 0.85, 0.9, 1.0]
+  }
+}
