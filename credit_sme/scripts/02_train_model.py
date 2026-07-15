@@ -45,13 +45,56 @@ def _scale_pos_weight(ytr):
     return (len(ytr) - pos) / pos
 
 
+def train_logistic(d):
+    """Logistic regression baseline (industry-standard scorecard family).
+
+    Purpose: an interpretable linear reference point. The gap between this
+    baseline and the gradient-boosting models quantifies how much of the
+    performance comes from non-linear interactions rather than from the data
+    itself. Unlike the tree models, a linear model cannot consume NaN or raw
+    category strings, so it needs an explicit preprocessing pipeline:
+      - numeric: median imputation (fit on TRAIN only, inside the Pipeline,
+        so there is no leakage) + standardization
+      - categorical: one-hot encoding, unknown categories ignored at predict
+        time, rare categories (<30 rows) grouped to bound dimensionality
+    The whole Pipeline is saved as one joblib artifact, same as the others.
+    """
+    from sklearn.compose import ColumnTransformer
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+    cat = d["cat_features"]
+    num = [c for c in d["Xtr"].columns if c not in cat]
+    pre = ColumnTransformer([
+        ("num", Pipeline([
+            ("impute", SimpleImputer(strategy="median")),
+            ("scale", StandardScaler()),
+        ]), num),
+        ("cat", OneHotEncoder(handle_unknown="ignore", min_frequency=30), cat),
+    ])
+    m = Pipeline([
+        ("pre", pre),
+        ("clf", LogisticRegression(
+            max_iter=2000, class_weight="balanced", C=1.0, solver="lbfgs")),
+    ])
+    m.fit(d["Xtr"], d["ytr"])
+    proba = {
+        "train": m.predict_proba(d["Xtr"])[:, 1],
+        "val":   m.predict_proba(d["Xval"])[:, 1],
+        "test":  m.predict_proba(d["Xte"])[:, 1],
+    }
+    return m, proba
+
+
 def train_catboost(d):
     from catboost import CatBoostClassifier, Pool
     cat = d["cat_features"]
     m = CatBoostClassifier(
-        iterations=3000, learning_rate=0.03, depth=6, l2_leaf_reg=3.0,
+        iterations=6000, learning_rate=0.03, depth=6, l2_leaf_reg=3.0,
         loss_function="Logloss", eval_metric="AUC", auto_class_weights="Balanced",
-        random_seed=RANDOM_SEED, early_stopping_rounds=150, verbose=200,
+        random_seed=RANDOM_SEED, early_stopping_rounds=200, verbose=400,
     )
     m.fit(Pool(d["Xtr"], d["ytr"], cat_features=cat),
           eval_set=Pool(d["Xval"], d["yval"], cat_features=cat), use_best_model=True)
@@ -98,7 +141,8 @@ def train_xgboost(d):
     return m, proba
 
 
-TRAINERS = {"catboost": train_catboost, "lightgbm": train_lightgbm, "xgboost": train_xgboost}
+TRAINERS = {"logistic": train_logistic, "catboost": train_catboost,
+            "lightgbm": train_lightgbm, "xgboost": train_xgboost}
 
 
 def _update_fit_csv(name, auc_tr, auc_val, auc_te):

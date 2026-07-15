@@ -1,5 +1,5 @@
 {
-  "model_version": "catboost-v1",
+  "model_version": "catboost-v2",
   "model_type": "CatBoostClassifier",
   "feature_cols": [
     "State", "BankState", "Term", "NoEmp", "NewExist", "CreateJob",
@@ -19,10 +19,10 @@
   "test_rows": 168346,
   "split_strategy": "Temporal split: train ApprovalFY < 2005; validation 2005-2006; test >= 2007",
   "offline_metrics": {
-    "roc_auc": 0.9544,
-    "pr_auc": 0.9042,
-    "brier": 0.0784,
-    "validation_roc_auc": 0.9743
+    "roc_auc": 0.9532,
+    "pr_auc": 0.9060,
+    "brier": 0.0774,
+    "validation_roc_auc": 0.9750
   },
   "intended_use": "Pre-approval decision support for SBA-like MSME applications; human review remains mandatory.",
   "limitations": [

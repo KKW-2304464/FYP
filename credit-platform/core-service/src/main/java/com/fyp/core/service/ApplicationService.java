@@ -220,6 +220,40 @@ public class ApplicationService {
         long approved = all.stream().filter(a -> a.getDecision() == DecisionType.APPROVED).count();
         long rejected = all.stream().filter(a -> a.getDecision() == DecisionType.REJECTED).count();
 
+        // Governance signals. Serving-time monitoring cannot observe ground-truth
+        // defaults (no outcome labels yet), so the honest signals are:
+        //  - approval rate among decided applications,
+        //  - override rate: how often the human contradicts the model suggestion,
+        //  - the distribution of model probabilities (a shift indicates input drift).
+        long decidedWithOutcome = approved + rejected;
+        double approvalRate = decidedWithOutcome == 0 ? 0.0 : (double) approved / decidedWithOutcome;
+
+        // Numerator and denominator use the same population: decided applications
+        // that actually carry a stored model suggestion (legacy rows without a
+        // suggestion cannot be overridden, so they must not dilute the rate).
+        long decidedWithSuggestion = all.stream()
+                .filter(a -> a.getDecision() != null && a.getSuggestion() != null)
+                .count();
+        long overrides = all.stream()
+                .filter(a -> a.getDecision() != null && a.getSuggestion() != null)
+                .filter(a -> "APPROVE".equals(a.getSuggestion())
+                        != (a.getDecision() == DecisionType.APPROVED))
+                .count();
+        double overrideRate = decidedWithSuggestion == 0 ? 0.0 : (double) overrides / decidedWithSuggestion;
+
+        Map<String, Long> histogram = new LinkedHashMap<>();
+        for (int i = 0; i < 10; i++) {
+            histogram.put(bucketLabel(i), 0L);
+        }
+        all.stream()
+                .map(LoanApplication::getProbability)
+                .filter(Objects::nonNull)
+                .forEach(p -> {
+                    int idx = (int) Math.min(9, Math.max(0, Math.floor(p * 10)));
+                    String key = bucketLabel(idx);
+                    histogram.put(key, histogram.get(key) + 1);
+                });
+
         return new AdminMetricsResponse(
                 all.size(),
                 byStatus.getOrDefault(ApplicationStatus.PENDING_REVIEW.name(), 0L),
@@ -227,12 +261,22 @@ public class ApplicationService {
                 approved,
                 rejected,
                 averageProbability,
+                approvalRate,
+                overrides,
+                overrideRate,
+                threshold,
+                histogram,
                 byStatus,
                 bySuggestion,
                 repository.findTop10ByOrderByCreatedAtDesc().stream().map(this::toResponse).toList());
     }
 
     // ---- helpers ----
+
+    /** Histogram bucket label for a probability decile, e.g. index 3 -> "30-40%". */
+    private static String bucketLabel(int index) {
+        return (index * 10) + "-" + ((index + 1) * 10) + "%";
+    }
 
     private LoanApplication find(String id) {
         return repository.findById(id)

@@ -96,6 +96,11 @@ export interface AdminMetrics {
   approved: number;
   rejected: number;
   averageProbability: number;
+  approvalRate: number;
+  overrides: number;
+  overrideRate: number;
+  threshold: number;
+  probabilityHistogram: Record<string, number>;
   byStatus: Record<ApplicationStatus, number>;
   bySuggestion: Record<string, number>;
   recentApplications: ApplicationResponse[];

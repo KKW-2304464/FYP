@@ -76,7 +76,22 @@ public class ReportService {
                     }
                 }
 
-                y -= 20;
+                y -= 24;
+                y = text(content, bold, 13, 54, y, "Model Limitations") - 15;
+                String[] limitations = {
+                        "1. Reject-inference bias: the model was trained only on loans that were previously",
+                        "   approved and disbursed. Outcomes of rejected applications were never observed, so",
+                        "   scores for profiles unlike historically approved loans are extrapolations.",
+                        "2. This is a loan-structure and business-context risk model (term, guarantee ratio,",
+                        "   industry, region). It is not a credit-bureau scorecard and uses no personal",
+                        "   financial history such as income, debts, or repayment records.",
+                        "3. The historically approved amount is used as a proxy for the requested amount.",
+                };
+                for (String line : limitations) {
+                    y = text(content, regular, 9, 54, y, line) - 12;
+                }
+
+                y -= 10;
                 text(content, regular, 9, 54, y,
                         "Note: The score is a decision-support signal. Final approval remains a human-reviewed business decision.");
             }

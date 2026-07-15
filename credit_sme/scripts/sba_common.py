@@ -22,7 +22,7 @@ RAW_CSV = DATA_DIR / "SBAnational.csv"
 CLEAN_PARQUET = DATA_DIR / "sba_clean.parquet"
 WINNER_FILE = REPORTS_DIR / "winner.txt"
 
-MODEL_NAMES = ["catboost", "lightgbm", "xgboost"]
+MODEL_NAMES = ["logistic", "catboost", "lightgbm", "xgboost"]
 
 # ---- 建模配置 -------------------------------------------------------------
 TARGET = "is_default"

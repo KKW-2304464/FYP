@@ -793,6 +793,15 @@ function ApplicationDetails({
           and a human reviewer remains responsible for the final lending decision.
         </p>
       </div>
+      <div className="explanation-callout">
+        <FileText size={18} />
+        <p>
+          Model limitation: the model was trained only on loans that were historically approved and disbursed
+          (reject-inference bias), and it evaluates loan structure and business context rather than personal financial
+          history. It is not a credit-bureau score, and results for atypical profiles are extrapolations that receive
+          extra human scrutiny.
+        </p>
+      </div>
       <AuditTrail token={token} applicationId={application.id} />
     </section>
   );
@@ -1063,6 +1072,14 @@ function AdminDashboard({
   ];
   const suggestedApprove = metrics?.bySuggestion?.APPROVE ?? 0;
   const suggestedReject = metrics?.bySuggestion?.REJECT ?? 0;
+  const histogramData = Object.entries(metrics?.probabilityHistogram ?? {}).map(([bucket, count]) => ({
+    bucket,
+    count
+  }));
+  const thresholdBucket =
+    metrics?.threshold != null
+      ? `${Math.min(Math.floor(metrics.threshold * 10), 9) * 10}-${(Math.min(Math.floor(metrics.threshold * 10), 9) + 1) * 10}%`
+      : null;
 
   return (
     <div className="content-grid">
@@ -1112,9 +1129,49 @@ function AdminDashboard({
               <div><dt>Feature inputs</dt><dd>{featureCount}</dd></div>
               <div><dt>Average default risk</dt><dd>{pct(metrics?.averageProbability)}</dd></div>
               <div><dt>Suggested approve / reject</dt><dd>{suggestedApprove} / {suggestedReject}</dd></div>
+              <div><dt>Approval rate (decided)</dt><dd>{pct(metrics?.approvalRate)}</dd></div>
+              <div><dt>Override rate</dt><dd>{pct(metrics?.overrideRate)} ({metrics?.overrides ?? 0})</dd></div>
             </dl>
           </section>
         </div>
+        <section className="chart-card">
+          <div className="chart-heading">
+            <div>
+              <span className="section-kicker">Serving-time monitoring</span>
+              <h4>Predicted default probability distribution</h4>
+            </div>
+            <span className="chart-range">all scored applications</span>
+          </div>
+          {histogramData.some((item) => item.count > 0) ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={histogramData} margin={{ top: 14, right: 12, bottom: 0, left: -18 }}>
+                <CartesianGrid stroke="#e6e4dc" strokeDasharray="3 5" vertical={false} />
+                <XAxis dataKey="bucket" axisLine={false} tickLine={false} tick={{ fill: "#6a706c", fontSize: 11 }} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "#6a706c", fontSize: 12 }} width={38} />
+                <Tooltip
+                  cursor={{ fill: "rgba(29, 86, 78, 0.06)" }}
+                  contentStyle={{ borderRadius: 10, border: "1px solid #d9ded8", boxShadow: "0 12px 30px rgba(28, 42, 37, 0.12)" }}
+                />
+                {thresholdBucket != null && (
+                  <ReferenceLine
+                    x={thresholdBucket}
+                    stroke="#c97836"
+                    strokeDasharray="5 5"
+                    label={{ value: `threshold ${pct(metrics?.threshold)}`, position: "insideTopRight", fill: "#a35f29", fontSize: 11 }}
+                  />
+                )}
+                <Bar dataKey="count" name="Applications" fill="#3f8575" radius={[8, 8, 2, 2]} maxBarSize={44} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyState title="No scored applications yet" />
+          )}
+          <p className="chart-note">
+            Default outcomes are not observable at serving time, so model discrimination (AUC) cannot be monitored in
+            production. The honest operational signals are volume, approval rate, override rate, and this score
+            distribution: a sustained shift versus earlier periods indicates input drift and a need to re-validate the model.
+          </p>
+        </section>
       </section>
       <DecisionPanel application={selectedApplication} onDecide={onDecide} onDownload={onDownload} />
       <section className="panel span-3">

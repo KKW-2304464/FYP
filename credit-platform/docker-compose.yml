@@ -47,7 +47,7 @@ services:
       SPRING_DATASOURCE_USERNAME: core
       SPRING_DATASOURCE_PASSWORD: core
       SCORING_BASE_URL: http://scoring-service:8000
-      DECISION_THRESHOLD: "0.31"
+      DECISION_THRESHOLD: "0.27"
     depends_on:
       postgres:
         condition: service_healthy
